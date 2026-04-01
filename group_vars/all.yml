@@ -3,7 +3,7 @@
 wp_db_name: "wordpress_client1"
 wp_db_user: "user_client1"
 wp_db_password: "un_mot_de_passe_complexe"
-wp_db_host: "<IP_DU_SERVEUR_SQL>"  # Remplacez par l'IP du serveur SQL (ex: `database_master`)
+wp_db_host: "172.20.10.5"
 wp_db_prefix: "wp_"
 client_domain: "client1.com"
 wp_install_dir: "/var/www/{{ client_domain }}"
@@ -18,3 +18,24 @@ wp_security_keys:
   secure_auth_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
   logged_in_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
   nonce_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+
+# Mot de passe root MySQL
+mysql_root_password: "votre_mot_de_passe_root"
+
+# Liste des clients
+clients:
+  - name: client1
+    domain: client1.com
+    db_name: client1_db
+    db_user: client1_user
+    db_password: client1_pass
+  - name: client2
+    domain: client2.com
+    db_name: client2_db
+    db_user: client2_user
+    db_password: client2_pass
+  - name: client3
+    domain: client3.com
+    db_name: client3_db
+    db_user: client3_user
+    db_password: client3_pass

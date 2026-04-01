@@ -1,50 +1,53 @@
 ---
-- name: Configurer la base de données MySQL pour WordPress
-  hosts: dbservers  # Cible les serveurs de base de données (db_master et db_slave)
+- name: Configurer les bases de données MySQL pour les clients WordPress
+  hosts: vm1
   become: true
-  vars:
-    wp_db_name: "wordpress_client1"  # Nom de la base de données WordPress
-    wp_db_user: "user_client1"       # Nom de l'utilisateur MySQL pour WordPress
-    wp_db_password: "{{ vault_wp_db_password }}"  # Mot de passe de l'utilisateur MySQL (à stocker dans un fichier chiffré avec Ansible Vault)
-    mysql_root_password: "{{ vault_mysql_root_password }}"  # Mot de passe root MySQL (à stocker dans un fichier chiffré avec Ansible Vault)
+  vars_files:
+    - ../group_vars/all.yml
 
   tasks:
-    - name: Installer MySQL Server (si non installé)
-      apt:
-        name: ["mysql-server", "python3-mysqldb"]
-        state: present
-      when: ansible_os_family == 'Debian'
+    - name: Configurer MySQL pour écouter sur toutes les interfaces
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^bind-address'
+        line: 'bind-address = 0.0.0.0'
+        backup: yes
+      notify: Redémarrer MySQL
 
-    - name: Démarrer et activer le service MySQL
-      service:
-        name: mysql
-        state: started
-        enabled: yes
-
-    - name: Créer la base de données WordPress
+    - name: Créer les bases de données pour les clients
       mysql_db:
-        name: "{{ wp_db_name }}"
+        name: "{{ item.db_name }}"
         state: present
         login_user: root
         login_password: "{{ mysql_root_password }}"
+      loop: "{{ clients }}"
+      when: mysql_root_password is defined
 
-    - name: Créer l'utilisateur MySQL pour WordPress
-      mysql_user:
-        name: "{{ wp_db_user }}"
-        password: "{{ wp_db_password }}"
-        priv: "{{ wp_db_name }}.*:ALL"
-        host: "%"
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-
-    - name: Vérifier les privilèges de l'utilisateur MySQL
+    - name: Créer les utilisateurs MySQL pour les clients avec caching_sha2_password
       command: >
         mysql -u root -p"{{ mysql_root_password }}" -e
-        "SHOW GRANTS FOR '{{ wp_db_user }}'@'%';"
-      register: user_grants
-      changed_when: false
+        "CREATE USER IF NOT EXISTS '{{ item.db_user }}'@'172.20.10.2' IDENTIFIED WITH caching_sha2_password BY '{{ item.db_password }}';"
+      loop: "{{ clients }}"
+      when: mysql_root_password is defined
+      register: create_user
+      changed_when: "'0 rows affected' not in create_user.stdout"
 
-    - name: Afficher les privilèges de l'utilisateur MySQL
-      debug:
-        var: user_grants.stdout_lines
+    - name: Donner les privilèges aux utilisateurs MySQL pour les clients
+      command: >
+        mysql -u root -p"{{ mysql_root_password }}" -e
+        "GRANT ALL PRIVILEGES ON {{ item.db_name }}.* TO '{{ item.db_user }}'@'172.20.10.2';"
+      loop: "{{ clients }}"
+      when: mysql_root_password is defined
+      register: grant_privileges
+      changed_when: "'0 rows affected' not in grant_privileges.stdout"
+
+    - name: Rafraîchir les privilèges MySQL
+      command: mysql -u root -p"{{ mysql_root_password }}" -e "FLUSH PRIVILEGES;"
+      changed_when: false
+      when: mysql_root_password is defined
+
+  handlers:
+    - name: Redémarrer MySQL
+      service:
+        name: mysql
+        state: restarted
