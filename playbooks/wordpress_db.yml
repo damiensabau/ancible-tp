@@ -1,50 +1,35 @@
 ---
 - name: Configurer les bases de données MySQL pour les clients WordPress
-  hosts: vm1
+  hosts: db_master
   become: true
-  vars_files:
-    - ../group_vars/all.yml
-
   tasks:
     - name: Configurer MySQL pour écouter sur toutes les interfaces
       lineinfile:
         path: /etc/mysql/mysql.conf.d/mysqld.cnf
         regexp: '^bind-address'
         line: 'bind-address = 0.0.0.0'
-        backup: yes
+        backup: true
       notify: Redémarrer MySQL
 
     - name: Créer les bases de données pour les clients
-      mysql_db:
-        name: "{{ item.db_name }}"
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-      loop: "{{ clients }}"
-      when: mysql_root_password is defined
-
-    - name: Créer les utilisateurs MySQL pour les clients avec caching_sha2_password
       command: >
-        mysql -u root -p"{{ mysql_root_password }}" -e
-        "CREATE USER IF NOT EXISTS '{{ item.db_user }}'@'172.20.10.2' IDENTIFIED WITH caching_sha2_password BY '{{ item.db_password }}';"
+        mysql -u root -e "CREATE DATABASE IF NOT EXISTS {{ item }}_db;"
       loop: "{{ clients }}"
-      when: mysql_root_password is defined
-      register: create_user
-      changed_when: "'0 rows affected' not in create_user.stdout"
 
-    - name: Donner les privilèges aux utilisateurs MySQL pour les clients
+    - name: Créer les utilisateurs MySQL pour les clients
       command: >
-        mysql -u root -p"{{ mysql_root_password }}" -e
-        "GRANT ALL PRIVILEGES ON {{ item.db_name }}.* TO '{{ item.db_user }}'@'172.20.10.2';"
+        mysql -u root -e
+        "CREATE USER IF NOT EXISTS '{{ item }}_user'@'172.20.10.2' IDENTIFIED BY '{{ item }}_pass';"
       loop: "{{ clients }}"
-      when: mysql_root_password is defined
-      register: grant_privileges
-      changed_when: "'0 rows affected' not in grant_privileges.stdout"
+
+    - name: Donner les privilèges aux utilisateurs MySQL
+      command: >
+        mysql -u root -e
+        "GRANT ALL PRIVILEGES ON {{ item }}_db.* TO '{{ item }}_user'@'172.20.10.2';"
+      loop: "{{ clients }}"
 
     - name: Rafraîchir les privilèges MySQL
-      command: mysql -u root -p"{{ mysql_root_password }}" -e "FLUSH PRIVILEGES;"
-      changed_when: false
-      when: mysql_root_password is defined
+      command: mysql -u root -e "FLUSH PRIVILEGES;"
 
   handlers:
     - name: Redémarrer MySQL

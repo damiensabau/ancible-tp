@@ -1,65 +1,77 @@
 ---
-- name: Déployer WordPress pour un client
-  hosts: webservers  # Assurez-vous que ce groupe existe dans `hosts.yml`
+- name: Déployer WordPress pour les clients
+  hosts: web
   become: true
   tasks:
     - name: Installer Apache, PHP et les dépendances
       apt:
+        name:
+          - apache2
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-curl
+          - php-gd
+          - php-xml
+          - php-mbstring
+          - git
+        state: present
+        update_cache: true
+
+    - name: Activer le module rewrite Apache
+      apache2_module:
+        name: rewrite
+        state: present
+      notify: Recharger Apache
+
+    - name: Créer un utilisateur système par client
+      user:
         name: "{{ item }}"
         state: present
-      loop:
-        - apache2
-        - php
-        - libapache2-mod-php
-        - php-mysql
-        - wget
-        - unzip
+        shell: /bin/bash
+        create_home: false
+      loop: "{{ clients }}"
 
-    - name: Créer le répertoire pour le site du client
-      file:
-        path: "{{ wp_install_dir }}"
-        state: directory
-        owner: www-data
-        group: www-data
-        mode: 0755
+    - name: Cloner WordPress pour chaque client
+      git:
+        repo: https://github.com/WordPress/WordPress.git
+        dest: "/var/www/{{ item }}"
+        version: master
+      loop: "{{ clients }}"
 
-    - name: Télécharger WordPress
-      get_url:
-        url: https://wordpress.org/latest.zip
-        dest: /tmp/wordpress.zip
-
-    - name: Extraire WordPress
-      unarchive:
-        src: /tmp/wordpress.zip
-        dest: "{{ wp_install_dir }}"
-        remote_src: yes
-        owner: www-data
-        group: www-data
-
-    - name: Déployer wp-config.php
+    - name: Déployer wp-config.php par client
       template:
         src: templates/wp-config.php.j2
-        dest: "{{ wp_install_dir }}/wp-config.php"
-        owner: www-data
+        dest: "/var/www/{{ item }}/wp-config.php"
+        owner: "{{ item }}"
         group: www-data
-        mode: 0644
+        mode: "0640"
+      loop: "{{ clients }}"
 
-    - name: Configurer le VirtualHost Apache
+    - name: Appliquer les permissions sur les fichiers WordPress
+      file:
+        path: "/var/www/{{ item }}"
+        owner: "{{ item }}"
+        group: www-data
+        recurse: true
+      loop: "{{ clients }}"
+
+    - name: Déployer le virtualhost par client
       template:
-        src: templates/virtualhost.conf.j2  # À créer (voir ci-dessous)
-        dest: "/etc/apache2/sites-available/{{ client_domain }}.conf"
-      notify: Redémarrer Apache
+        src: templates/virtualhost.conf.j2
+        dest: "/etc/apache2/sites-available/{{ item }}.conf"
+      loop: "{{ clients }}"
+      notify: Recharger Apache
 
-    - name: Activer le site
-      command: a2ensite {{ client_domain }}
-      notify: Redémarrer Apache
-
-    - name: Désactiver le site par défaut
-      command: a2dissite 000-default
-      notify: Redémarrer Apache
+    - name: Activer les sites clients
+      command: a2ensite {{ item }}.conf
+      args:
+        creates: "/etc/apache2/sites-enabled/{{ item }}.conf"
+      loop: "{{ clients }}"
+      notify: Recharger Apache
 
   handlers:
-    - name: Redémarrer Apache
+    - name: Recharger Apache
       service:
         name: apache2
-        state: restarted
+        state: reloaded
