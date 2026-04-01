@@ -1,0 +1,50 @@
+---
+- name: Configurer la base de données MySQL pour WordPress
+  hosts: dbservers  # Cible les serveurs de base de données (db_master et db_slave)
+  become: true
+  vars:
+    wp_db_name: "wordpress_client1"  # Nom de la base de données WordPress
+    wp_db_user: "user_client1"       # Nom de l'utilisateur MySQL pour WordPress
+    wp_db_password: "{{ vault_wp_db_password }}"  # Mot de passe de l'utilisateur MySQL (à stocker dans un fichier chiffré avec Ansible Vault)
+    mysql_root_password: "{{ vault_mysql_root_password }}"  # Mot de passe root MySQL (à stocker dans un fichier chiffré avec Ansible Vault)
+
+  tasks:
+    - name: Installer MySQL Server (si non installé)
+      apt:
+        name: ["mysql-server", "python3-mysqldb"]
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Démarrer et activer le service MySQL
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Créer la base de données WordPress
+      mysql_db:
+        name: "{{ wp_db_name }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Créer l'utilisateur MySQL pour WordPress
+      mysql_user:
+        name: "{{ wp_db_user }}"
+        password: "{{ wp_db_password }}"
+        priv: "{{ wp_db_name }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Vérifier les privilèges de l'utilisateur MySQL
+      command: >
+        mysql -u root -p"{{ mysql_root_password }}" -e
+        "SHOW GRANTS FOR '{{ wp_db_user }}'@'%';"
+      register: user_grants
+      changed_when: false
+
+    - name: Afficher les privilèges de l'utilisateur MySQL
+      debug:
+        var: user_grants.stdout_lines
