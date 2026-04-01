@@ -26,36 +26,36 @@
 
     - name: Créer un utilisateur système par client
       user:
-        name: "{{ item }}"
+        name: "{{ item.name }}"
         state: present
         shell: /bin/bash
         create_home: false
       loop: "{{ clients }}"
 
     - name: Ajouter safe.directory pour git
-      command: git config --global --add safe.directory /var/www/{{ item }}
+      command: git config --global --add safe.directory /var/www/{{ item.name }}
       loop: "{{ clients }}"
 
     - name: Cloner WordPress pour chaque client
       git:
         repo: https://github.com/WordPress/WordPress.git
-        dest: "/var/www/{{ item }}"
+        dest: "/var/www/{{ item.name }}"
         version: master
       loop: "{{ clients }}"
 
     - name: Déployer wp-config.php par client
       template:
         src: templates/wp-config.php.j2
-        dest: "/var/www/{{ item }}/wp-config.php"
-        owner: "{{ item }}"
+        dest: "/var/www/{{ item.name }}/wp-config.php"
+        owner: "{{ item.name }}"
         group: www-data
         mode: "0640"
       loop: "{{ clients }}"
 
     - name: Appliquer les permissions sur les fichiers WordPress
       file:
-        path: "/var/www/{{ item }}"
-        owner: "{{ item }}"
+        path: "/var/www/{{ item.name }}"
+        owner: "{{ item.name }}"
         group: www-data
         recurse: true
       loop: "{{ clients }}"
@@ -63,14 +63,14 @@
     - name: Déployer le virtualhost par client
       template:
         src: templates/virtualhost.conf.j2
-        dest: "/etc/apache2/sites-available/{{ item }}.conf"
+        dest: "/etc/apache2/sites-available/{{ item.name }}.conf"
       loop: "{{ clients }}"
       notify: Recharger Apache
 
     - name: Activer les sites clients
-      command: a2ensite {{ item }}.conf
+      command: a2ensite {{ item.name }}.conf
       args:
-        creates: "/etc/apache2/sites-enabled/{{ item }}.conf"
+        creates: "/etc/apache2/sites-enabled/{{ item.name }}.conf"
       loop: "{{ clients }}"
       notify: Recharger Apache
 

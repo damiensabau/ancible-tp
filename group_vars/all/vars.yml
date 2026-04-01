@@ -1,0 +1,12 @@
+---
+project_name: "TP Ansible SRE"
+
+db_host: 172.20.10.5
+
+clients:
+  - name: client1
+    db_pass: "{{ vault_client1_db_pass }}"
+  - name: client2
+    db_pass: "{{ vault_client2_db_pass }}"
+  - name: client3
+    db_pass: "{{ vault_client3_db_pass }}"

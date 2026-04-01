@@ -1,7 +1,7 @@
 <?php
-define( 'DB_NAME', '{{ item }}_db' );
-define( 'DB_USER', '{{ item }}_user' );
-define( 'DB_PASSWORD', '{{ item }}_pass' );
+define( 'DB_NAME', '{{ item.name }}_db' );
+define( 'DB_USER', '{{ item.name }}_user' );
+define( 'DB_PASSWORD', '{{ item.db_pass }}' );
 define( 'DB_HOST', '{{ db_host }}' );
 define( 'DB_CHARSET', 'utf8' );
 define( 'DB_COLLATE', '' );

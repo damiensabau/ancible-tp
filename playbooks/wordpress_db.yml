@@ -13,19 +13,19 @@
 
     - name: Créer les bases de données pour les clients
       command: >
-        mysql -u root -e "CREATE DATABASE IF NOT EXISTS {{ item }}_db;"
+        mysql -u root -e "CREATE DATABASE IF NOT EXISTS {{ item.name }}_db;"
       loop: "{{ clients }}"
 
     - name: Créer les utilisateurs MySQL pour les clients
       command: >
         mysql -u root -e
-        "CREATE USER IF NOT EXISTS '{{ item }}_user'@'172.20.10.2' IDENTIFIED BY '{{ item }}_pass';"
+        "CREATE USER IF NOT EXISTS '{{ item.name }}_user'@'172.20.10.2' IDENTIFIED BY '{{ item.db_pass }}';"
       loop: "{{ clients }}"
 
     - name: Donner les privilèges aux utilisateurs MySQL
       command: >
         mysql -u root -e
-        "GRANT ALL PRIVILEGES ON {{ item }}_db.* TO '{{ item }}_user'@'172.20.10.2';"
+        "GRANT ALL PRIVILEGES ON {{ item.name }}_db.* TO '{{ item.name }}_user'@'172.20.10.2';"
       loop: "{{ clients }}"
 
     - name: Rafraîchir les privilèges MySQL
