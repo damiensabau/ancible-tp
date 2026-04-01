@@ -1,6 +1,7 @@
 ---
 - name: Configuration système
   hosts: all
+  gather_facts: false
   become: true
   tasks:
     - name: Créer l'utilisateur esiee
@@ -13,7 +14,7 @@
       ansible.posix.authorized_key:
         user: esiee
         state: present
-        key: "{{ lookup('file', 'files/damien.pub') }}"
+        key: "{{ lookup('file', 'files/clement.pub') }}"
         
     - name: Déployer la clé SSH du binôme pour esiee
       ansible.posix.authorized_key:

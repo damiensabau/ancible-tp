@@ -1,0 +1,65 @@
+---
+- name: Déployer WordPress pour un client
+  hosts: webservers  # Assurez-vous que ce groupe existe dans `hosts.yml`
+  become: true
+  tasks:
+    - name: Installer Apache, PHP et les dépendances
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apache2
+        - php
+        - libapache2-mod-php
+        - php-mysql
+        - wget
+        - unzip
+
+    - name: Créer le répertoire pour le site du client
+      file:
+        path: "{{ wp_install_dir }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: 0755
+
+    - name: Télécharger WordPress
+      get_url:
+        url: https://wordpress.org/latest.zip
+        dest: /tmp/wordpress.zip
+
+    - name: Extraire WordPress
+      unarchive:
+        src: /tmp/wordpress.zip
+        dest: "{{ wp_install_dir }}"
+        remote_src: yes
+        owner: www-data
+        group: www-data
+
+    - name: Déployer wp-config.php
+      template:
+        src: templates/wp-config.php.j2
+        dest: "{{ wp_install_dir }}/wp-config.php"
+        owner: www-data
+        group: www-data
+        mode: 0644
+
+    - name: Configurer le VirtualHost Apache
+      template:
+        src: templates/virtualhost.conf.j2  # À créer (voir ci-dessous)
+        dest: "/etc/apache2/sites-available/{{ client_domain }}.conf"
+      notify: Redémarrer Apache
+
+    - name: Activer le site
+      command: a2ensite {{ client_domain }}
+      notify: Redémarrer Apache
+
+    - name: Désactiver le site par défaut
+      command: a2dissite 000-default
+      notify: Redémarrer Apache
+
+  handlers:
+    - name: Redémarrer Apache
+      service:
+        name: apache2
+        state: restarted

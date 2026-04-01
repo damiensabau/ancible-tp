@@ -1,0 +1,11 @@
+<VirtualHost *:80>
+    ServerName {{ client_domain }}
+    DocumentRoot {{ wp_install_dir }}
+    <Directory {{ wp_install_dir }}>
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    ErrorLog ${APACHE_LOG_DIR}/{{ client_domain }}_error.log
+    CustomLog ${APACHE_LOG_DIR}/{{ client_domain }}_access.log combined
+</VirtualHost>

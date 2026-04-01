@@ -1,2 +1,20 @@
 ---
-project_name: "TP Ansible SRE"
+# Variables pour WordPress
+wp_db_name: "wordpress_client1"
+wp_db_user: "user_client1"
+wp_db_password: "un_mot_de_passe_complexe"
+wp_db_host: "<IP_DU_SERVEUR_SQL>"  # Remplacez par l'IP du serveur SQL (ex: `database_master`)
+wp_db_prefix: "wp_"
+client_domain: "client1.com"
+wp_install_dir: "/var/www/{{ client_domain }}"
+
+# Clés de sécurité WordPress (générées automatiquement)
+wp_security_keys:
+  auth_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  secure_auth_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  logged_in_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  nonce_key: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  auth_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  secure_auth_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  logged_in_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
+  nonce_salt: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits,hexdigits') }}"
