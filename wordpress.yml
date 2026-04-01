@@ -32,6 +32,10 @@
         create_home: false
       loop: "{{ clients }}"
 
+    - name: Ajouter safe.directory pour git
+      command: git config --global --add safe.directory /var/www/{{ item }}
+      loop: "{{ clients }}"
+
     - name: Cloner WordPress pour chaque client
       git:
         repo: https://github.com/WordPress/WordPress.git
