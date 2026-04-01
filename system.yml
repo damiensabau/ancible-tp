@@ -14,6 +14,12 @@
         user: esiee
         state: present
         key: "{{ lookup('file', 'files/damien.pub') }}"
+        
+    - name: Déployer la clé SSH du binôme pour esiee
+      ansible.posix.authorized_key:
+        user: esiee
+        state: present
+        key: "{{ lookup('file', 'files/binome.pub') }}"
 
     - name: Déployer le message of the day
       template:
