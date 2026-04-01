@@ -1,0 +1,89 @@
+---
+- name: Configuration serveur web
+  hosts: web
+  become: true
+  tasks:
+    - name: Installer Apache et PHP
+      apt:
+        name:
+          - apache2
+          - php
+          - libapache2-mod-php
+          - php-mysql
+          - php-curl
+          - php-gd
+          - php-xml
+          - php-mbstring
+          - git
+        state: present
+        update_cache: true
+
+    - name: Activer le module rewrite Apache
+      apache2_module:
+        name: rewrite
+        state: present
+      notify: Recharger Apache
+
+    - name: Déployer /etc/hosts
+      template:
+        src: ../templates/hosts.j2
+        dest: /etc/hosts
+
+    - name: Créer un utilisateur système par client
+      user:
+        name: "{{ item.name }}"
+        state: present
+        shell: /bin/bash
+        home: "/var/www/{{ item.name }}"
+        create_home: false
+      loop: "{{ clients }}"
+
+    - name: Supprimer le répertoire existant avant clone
+      file:
+        path: "/var/www/{{ item.name }}"
+        state: absent
+      loop: "{{ clients }}"
+
+    - name: Cloner WordPress pour chaque client
+      git:
+        repo: https://github.com/WordPress/WordPress.git
+        dest: "/var/www/{{ item.name }}"
+        version: master
+      loop: "{{ clients }}"
+
+    - name: Déployer wp-config.php par client
+      template:
+        src: ../templates/wp-config.php.j2
+        dest: "/var/www/{{ item.name }}/wp-config.php"
+        owner: "{{ item.name }}"
+        group: "{{ item.name }}"
+        mode: "0640"
+      loop: "{{ clients }}"
+
+    - name: Appliquer les permissions sur les fichiers WordPress
+      file:
+        path: "/var/www/{{ item.name }}"
+        owner: "{{ item.name }}"
+        group: www-data
+        recurse: true
+      loop: "{{ clients }}"
+
+    - name: Déployer le virtualhost par client
+      template:
+        src: ../templates/vhost.conf.j2
+        dest: "/etc/apache2/sites-available/{{ item.name }}.conf"
+      loop: "{{ clients }}"
+      notify: Recharger Apache
+
+    - name: Activer les sites clients
+      command: a2ensite {{ item.name }}.conf
+      args:
+        creates: "/etc/apache2/sites-enabled/{{ item.name }}.conf"
+      loop: "{{ clients }}"
+      notify: Recharger Apache
+
+  handlers:
+    - name: Recharger Apache
+      service:
+        name: apache2
+        state: reloaded

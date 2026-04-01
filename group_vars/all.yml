@@ -1,2 +1,21 @@
 ---
 project_name: "TP Ansible SRE"
+
+db_host: 172.20.10.13
+
+clients:
+  - name: client1
+    domain: client1.com
+    db_name: client1_db
+    db_user: client1_user
+    db_password: client1_pass
+  - name: client2
+    domain: client2.com
+    db_name: client2_db
+    db_user: client2_user
+    db_password: client2_pass
+  - name: client3
+    domain: client3.com
+    db_name: client3_db
+    db_user: client3_user
+    db_password: client3_pass

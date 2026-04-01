@@ -19,7 +19,7 @@
       ansible.posix.authorized_key:
         user: esiee
         state: present
-        key: "{{ lookup('file', 'files/binome.pub') }}"
+        key: "{{ lookup('file', 'files/clement.pub') }}"
 
     - name: Déployer le message of the day
       template:
