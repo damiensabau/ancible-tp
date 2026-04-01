@@ -1,7 +1,7 @@
 ---
 project_name: "TP Ansible SRE"
 
-db_host: 172.20.10.13
+db_host: 172.20.10.5
 
 clients:
   - name: client1
